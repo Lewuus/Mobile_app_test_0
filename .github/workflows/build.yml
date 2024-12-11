@@ -10,24 +10,31 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # used to cache dependencies with a timeout
-      - name: Get Date
-        id: get-date
-        run: |
-          echo "::set-output name=date::$(/bin/date -u "+%Y%m%d")"
-        shell: bash
+      # Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9' # Replace with your required Python version
 
+      # Get Date
+      - name: Get Date
+        run: echo "DATE=$(date -u '+%Y%m%d')" >> $GITHUB_ENV
+
+      # Cache Buildozer global directory
       - name: Cache Buildozer global directory
         uses: actions/cache@v2
         with:
           path: .buildozer_global
-          key: buildozer-global-${{ hashFiles('buildozer.spec') }} # Replace with your path
+          key: buildozer-global-${{ hashFiles('buildozer.spec') }}
 
-      - uses: actions/cache@v2
+      # Cache Buildozer project directory
+      - name: Cache Buildozer project directory
+        uses: actions/cache@v2
         with:
           path: .buildozer
-          key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('buildozer.spec') }}
+          key: buildozer-${{ hashFiles('buildozer.spec') }}
 
+      # Build with Buildozer
       - name: Build with Buildozer
         uses: ArtemSBulgakov/buildozer-action@v1
         id: buildozer
@@ -35,8 +42,13 @@ jobs:
           command: buildozer android debug
           buildozer_version: stable
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v2
+      # Debug: List generated files
+      - name: List generated files
+        run: ls -R ./
+
+      # Upload artifacts
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
         with:
           name: package
           path: ${{ steps.buildozer.outputs.filename }}
